@@ -1,0 +1,272 @@
+{
+  "title": "TinySID",
+  "children": [
+    {
+      "title": "Overview",
+      "lines": [
+        "Plays C64 .sid music",
+        "on a built-in 6502",
+        "and SID chip core.",
+        "",
+        "The tune runs live:",
+        "mute voices, bend",
+        "the filter, play the",
+        "pads with the song's",
+        "own instruments.",
+        "",
+        "Follows the Move",
+        "transport and tempo.",
+        "",
+        "PSID files only",
+        "(single SID)."
+      ]
+    },
+    {
+      "title": "Pages",
+      "children": [
+        {
+          "title": "Mixer",
+          "lines": [
+            "Voice 1-3: level of",
+            " each SID voice.",
+            " 0 mutes it.",
+            "",
+            "Trim: output level,",
+            " -18 to +6 dB.",
+            "",
+            "Tempo Sync: see",
+            " Tempo, below.",
+            "",
+            "Speed: scales the",
+            " tune's rate, 0.75",
+            " to 1.5x. Pitch",
+            " does not change."
+          ]
+        },
+        {
+          "title": "Song",
+          "lines": [
+            "First page: the",
+            " piano roll.",
+            "",
+            "Second page:",
+            " Line 1:",
+            "  SID File",
+            "  Subtune",
+            "  Est BPM",
+            "  Key",
+            " Line 2:",
+            "  Snoop Voice",
+            "  Note",
+            "  Level",
+            "",
+            "BPM, Key, Note and",
+            "Level are readouts."
+          ]
+        },
+        {
+          "title": "Pad + Filter",
+          "lines": [
+            "Line 1:",
+            " Play On Voice",
+            " Pad Sound",
+            " Chip",
+            " Filter",
+            "Line 2:",
+            " Cutoff",
+            " Reso"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Piano Roll",
+      "lines": [
+        "Shows the voice you",
+        "chose in Snoop Voice.",
+        "",
+        "Top: the song's key,",
+        "e.g. [D Min], and",
+        "the voice.",
+        "Next: note, Hz and",
+        "tuning in cents.",
+        "",
+        "Keys:",
+        " Filled white key or",
+        " hollow black key =",
+        " sounding now.",
+        " Small bars at the",
+        " bottom of a key =",
+        " notes from the last",
+        " half second.",
+        " Solid black keys are",
+        " just black keys.",
+        "",
+        "All Voices follows",
+        "whichever voice",
+        "started last."
+      ]
+    },
+    {
+      "title": "Song Info",
+      "lines": [
+        "Each time a tune or",
+        "subtune loads, a",
+        "silent scan plays it",
+        "in the background",
+        "(a few seconds).",
+        "",
+        "It finds the key and",
+        "scale, the tempo, and",
+        "the instruments each",
+        "voice uses.",
+        "",
+        "Est BPM is a whole",
+        "number, fixed once",
+        "the scan ends.",
+        "Known tunes use a",
+        "built-in tempo table.",
+        "",
+        "Key shows -- when",
+        "the tune has no clear",
+        "tonal centre."
+      ]
+    },
+    {
+      "title": "Transport",
+      "lines": [
+        "The tune follows the",
+        "Move.",
+        "",
+        "Start: from beat 1.",
+        "Stop: halts, and the",
+        " voices fade out so",
+        " nothing rings on.",
+        "Continue: carries",
+        " on.",
+        "",
+        "Loaded while the",
+        "Move is stopped, it",
+        "stays silent until",
+        "you press play."
+      ]
+    },
+    {
+      "title": "Tempo",
+      "children": [
+        {
+          "title": "Free modes",
+          "lines": [
+            "PAL 50Hz or NTSC",
+            "60Hz: the tune runs",
+            "at its own speed.",
+            "",
+            "Loading a file picks",
+            "the one its header",
+            "asks for. You can",
+            "change it, and a",
+            "subtune change",
+            "keeps your choice."
+          ]
+        },
+        {
+          "title": "Host Lock",
+          "lines": [
+            "Locked to the Move's",
+            "MIDI clock. A 16th",
+            "note is 6 ticks and",
+            "the tune's frames",
+            "are counted from the",
+            "ticks, so it never",
+            "drifts, however long",
+            "a clip loops.",
+            "",
+            "Start puts the tune's",
+            "first beat on Step 1.",
+            "",
+            "Lock 0.5x / 2x: half",
+            "or double speed.",
+            "",
+            "Speed other than 1.0",
+            "leaves the lock and",
+            "just scales the rate.",
+            "",
+            "If the clock stops",
+            "for 2 s the tune",
+            "waits for it."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Pad",
+      "lines": [
+        "Play On Voice hands",
+        "one SID voice to the",
+        "pads. It fades out of",
+        "the song and plays",
+        "your notes instead.",
+        "",
+        "Pad Sound lists the",
+        "instruments the song",
+        "really uses on that",
+        "voice, e.g.",
+        " 1 Pul50 38 7A",
+        " (wave, AD, SR).",
+        "",
+        "Pulse sweep, vibrato",
+        "and trills of the",
+        "instrument play on",
+        "every key.",
+        "",
+        "One note at a time,",
+        "last note wins.",
+        "Velocity sets level.",
+        "",
+        "The list fills in",
+        "when the scan ends."
+      ]
+    },
+    {
+      "title": "Filter",
+      "lines": [
+        "Filter = Song keeps",
+        "the tune's own",
+        "filter. Cutoff and",
+        "Reso then only",
+        "offset it, and do",
+        "nothing on tunes that",
+        "never use the filter.",
+        "",
+        "Low / Band / High",
+        "Pass sends all three",
+        "voices through that",
+        "filter. Cutoff and",
+        "Reso become absolute.",
+        "",
+        "Chip: 6581 (warm,",
+        "rough) or 8580",
+        "(clean)."
+      ]
+    },
+    {
+      "title": "SID Files",
+      "lines": [
+        "Put .sid files in the",
+        "module's sids folder",
+        "(Schwung web manager",
+        "or scp).",
+        "",
+        "Pick one with SID",
+        "File on the Song",
+        "page. A built-in tune",
+        "plays by default.",
+        "",
+        "Not supported:",
+        " RSID files",
+        " multi-SID tunes",
+        " digi samples"
+      ]
+    }
+  ]
+}

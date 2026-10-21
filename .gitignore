@@ -1,0 +1,8 @@
+build/
+__pycache__/
+
+# local-only copyrighted tune; embedded by scripts/build.sh when present, never commit or redistribute
+assets/Commando.sid
+assets/*.sid
+!assets/demo.sid
+host_ref/
