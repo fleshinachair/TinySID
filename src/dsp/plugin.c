@@ -17,6 +17,8 @@
 #define SAMPLE_RATE 44100.0
 #define SCRATCH_FRAMES 512
 #define PATH_MAX_LEN 240
+#define CHAIN_PARAMS_BUDGET 3900  /* chain_params stays under this once its placeholders are filled */
+#define MOUT_PER_BLOCK 8          /* notes-out packets handed to the host per audio block: the host's MIDI buffer is small and shared */
 
 static const host_api_v1_t *g_host;
 
@@ -25,16 +27,22 @@ typedef struct {
     char error[160];
     char module_dir[PATH_MAX_LEN];
     char load_path[PATH_MAX_LEN];     /* last file picked with sid_file, kept for the saved state */
+    int chain_ui;                     /* ui_chain.js sits beside the module: it supplies the pages, so the DSP does not */
+    unsigned mout_sent, mout_refused;  /* Notes Out packets the host took, and times it refused one (its buffer was full) */
     float left[SCRATCH_FRAMES], right[SCRATCH_FRAMES];
 } instance_t;
 
 /* Parameters saved with a set, in restore order: the subtune re-inits the tune, so it goes first. */
 static const struct { const char *key; int quoted; const char *read_key; } k_state[] = {
-    { "subtune", 0, NULL }, { "v1_vol", 0, NULL }, { "v2_vol", 0, NULL }, { "v3_vol", 0, NULL }, { "out_trim", 0, NULL },
+    { "subtune", 0, NULL }, { "v1_vol", 0, NULL }, { "v2_vol", 0, NULL }, { "v3_vol", 0, NULL },
     { "sync_mode", 1, NULL }, { "tempo_trim", 0, NULL }, { "chip_model", 1, NULL }, { "filter_mode", 1, NULL },
     { "cutoff_bias", 0, NULL }, { "res_bias", 0, NULL },
     /* the pad sound is saved as its list position: instrument names only exist once the tune has been scanned */
-    { "pad_sound", 0, "pad_sound_index" }, { "pad_target", 1, NULL }, { "snoop_voice", 1, NULL }
+    { "pad_sound", 0, "pad_sound_index" }, { "pad_target", 1, NULL }, { "snoop_voice", 1, NULL },
+    { "pitch_snap", 1, NULL }, { "master_tune", 0, NULL },
+    { "stereo_spread", 0, NULL }, { "ducking_depth", 0, NULL }, { "ducking_release", 0, NULL },
+    { "transpose", 0, NULL }, { "filter_pump", 0, NULL }, { "lofi", 0, NULL }, { "fx_duck", 0, NULL }, { "midi_out_v1", 1, NULL }, { "midi_out_v2", 1, NULL }, { "midi_out_v3", 1, NULL },
+    { "midi_out_ch1", 0, NULL }, { "midi_out_ch2", 0, NULL }, { "midi_out_ch3", 0, NULL }, { "audio_delay", 0, NULL }
 };
 #define STATE_KEYS ((int)(sizeof(k_state) / sizeof(k_state[0])))
 
@@ -50,16 +58,58 @@ static void *create_instance(const char *module_dir, const char *json_defaults)
         return NULL;
     }
     snprintf(inst->module_dir, sizeof(inst->module_dir), "%s", module_dir ? module_dir : "");
+    if (inst->module_dir[0] && strlen(inst->module_dir) + 16 < PATH_MAX_LEN) {
+        char ui[PATH_MAX_LEN + 16];
+        snprintf(ui, sizeof(ui), "%s/ui_chain.js", inst->module_dir);
+        FILE *f = fopen(ui, "rb");
+        if (f) { inst->chain_ui = 1; fclose(f); }
+    }
+    /* The module's own screen runs the pads in Pad Mode Control (pad_press), so incoming notes are not buttons as well: they include
+     * our own Notes Out notes coming back, and a bass line in 36..42 would keep pressing them. */
+    if (inst->chain_ui) tinysid_set_param(inst->engine, "note_controls", "0");
+    /* The tracks Notes Out plays sound some way after TinySID itself (by ear on a Move, 30 to 100 ms): start near that. It is only in
+     * force while a voice is being sent. */
+    tinysid_set_param(inst->engine, "audio_delay", "50");
+    tinysid_set_param(inst->engine, "snoop_voice", "All Voices");        /* the roll follows whichever voice started last */
     if (g_host && g_host->get_clock_status) tinysid_set_clock_status_fn(inst->engine, g_host->get_clock_status);
     int err = tinysid_load(inst->engine, default_sid_data, default_sid_len);
     if (err != PSID_OK) snprintf(inst->error, sizeof(inst->error), "default tune: %s", psid_strerror(err));
     return inst;
 }
 
+/* Hands the engine's queued notes-out events to the host as 4-byte USB-MIDI packets on cable 2 (Move routes those by channel to the
+ * track instrument listening there). The host may refuse one when its buffer is full: it stays queued and goes next block. With
+ * no way to send, the events are dropped so the queue cannot back up. */
+static void send_notes_out(instance_t *inst)
+{
+    int type, note, value, ch, sent = 0;
+    while (sent < MOUT_PER_BLOCK && tinysid_midi_out_peek(inst->engine, &type, &note, &value, &ch)) {
+        uint8_t pkt[4];
+        if (type == 2) {
+            pkt[0] = 0x2E; pkt[1] = (uint8_t)(0xE0 | ch); pkt[2] = (uint8_t)(value & 0x7F); pkt[3] = (uint8_t)((value >> 7) & 0x7F);
+        } else {
+            pkt[0] = type ? 0x29 : 0x28; pkt[1] = (uint8_t)((type ? 0x90 : 0x80) | ch); pkt[2] = (uint8_t)note; pkt[3] = (uint8_t)(type ? value : 0);
+        }
+        if (g_host && g_host->slot_recv_channel && g_host->slot_recv_channel(inst) == ch) {   /* our own channel: it would come straight back in */
+            tinysid_midi_out_drop(inst->engine);
+            continue;
+        }
+        int (*send)(const uint8_t *, int) = NULL;
+        if (g_host && g_host->midi_inject_to_move) send = g_host->midi_inject_to_move;
+        else if (g_host && g_host->midi_send_external) send = g_host->midi_send_external;
+        if (send && send(pkt, 4) <= 0) { inst->mout_refused++; return; }     /* refused: try again next block */
+        if (send) inst->mout_sent++;
+        tinysid_midi_out_drop(inst->engine);
+        sent++;
+    }
+}
+
 static void destroy_instance(void *p)
 {
     instance_t *inst = p;
     if (!inst) return;
+    tinysid_midi_out_release(inst->engine);              /* no note left hanging on the track that was listening */
+    send_notes_out(inst);
     tinysid_destroy(inst->engine);
     free(inst);
 }
@@ -68,7 +118,11 @@ static void on_midi(void *p, const uint8_t *msg, int len, int source)
 {
     (void)source;
     instance_t *inst = p;
-    if (inst) tinysid_midi(inst->engine, msg, len);
+    if (!inst) return;
+    /* What we send on cable 2 can come back into any slot listening on that channel, this one included: while Notes Out is on, notes
+     * and bends on its channel are our own echo and are not played. */
+    if (len >= 1 && msg[0] >= 0x80 && msg[0] < 0xF0 && tinysid_midi_out_listens(inst->engine, msg[0] & 0x0F)) return;
+    tinysid_midi(inst->engine, msg, len);
 }
 
 /* ---- saved state: a flat JSON object of parameter values ------------------- */
@@ -182,9 +236,14 @@ static int chain_params(instance_t *inst, char *buf, int buf_len)
     else
         snprintf(sids, sizeof(sids), "/data/UserData");
 
-    char pad_options[700];
-    if (tinysid_pad_options(inst->engine, pad_options, sizeof(pad_options)) < 0) snprintf(pad_options, sizeof(pad_options), "[\"Lead\"]");
     static const char t_max[] = "@SUBTUNE_MAX@", t_dir[] = "@SIDS_DIR@", t_pad[] = "@PAD_OPTIONS@";
+    /* The whole document has to fit the host's read buffer (4096 is the smallest anything in Schwung uses), so the instrument list is
+     * given what is left of a budget below that, and ends after the last name that fits. */
+    char pad_options[700];
+    long base = (long)strlen(chain_params_json) - (long)(sizeof(t_max) + sizeof(t_dir) + sizeof(t_pad) - 3) + (long)strlen(count) + (long)strlen(sids);
+    long room = CHAIN_PARAMS_BUDGET - base;
+    if (room > (long)sizeof(pad_options)) room = (long)sizeof(pad_options);
+    if (room < 10 || tinysid_pad_options(inst->engine, pad_options, (int)room) < 0) snprintf(pad_options, sizeof(pad_options), "[\"Lead\"]");
     const char *src = chain_params_json;
     int n = 0;
     while (*src) {
@@ -208,12 +267,21 @@ static int get_param(void *p, const char *key, char *buf, int buf_len)
     instance_t *inst = p;
     if (!inst || !key || !buf || buf_len <= 0) return -1;
 
-    if (!strcmp(key, "ui_hierarchy")) return copy_out(ui_hierarchy_json, buf, buf_len);
+    /* The host loads a component's own ui_chain.js only when the DSP serves no hierarchy (it tries the hierarchy editor first), so
+     * while that file is installed this key is refused and the script supplies the same document itself. Remove the file and the
+     * stock editor comes straight back. */
+    if (!strcmp(key, "ui_hierarchy")) return inst->chain_ui ? -1 : copy_out(ui_hierarchy_json, buf, buf_len);
     if (!strcmp(key, "chain_params")) return chain_params(inst, buf, buf_len);
     if (!strcmp(key, "name")) return copy_out("TinySID", buf, buf_len);
     if (!strcmp(key, "preset_count")) return copy_out("0", buf, buf_len);
     if (!strcmp(key, "state")) return build_state(inst, buf, buf_len);
     if (!strcmp(key, "sid_file")) return copy_out(inst->load_path, buf, buf_len);
+    if (!strcmp(key, "mout_stats")) {                   /* "<sent>,<refused>,<longest queue>,<waiting now>" */
+        char s[64];
+        snprintf(s, sizeof(s), "%u,%u,%d,%d", inst->mout_sent, inst->mout_refused, tinysid_midi_out_longest(inst->engine),
+                 tinysid_midi_out_pending(inst->engine));
+        return copy_out(s, buf, buf_len);
+    }
     return tinysid_get_param(inst->engine, key, buf, buf_len);
 }
 
@@ -233,6 +301,7 @@ static void render_block(void *p, int16_t *out, int frames)
         memset(out, 0, (size_t)frames * 2 * sizeof(int16_t));
         return;
     }
+
     int done = 0;
     while (done < frames) {
         int n = frames - done;
@@ -244,6 +313,7 @@ static void render_block(void *p, int16_t *out, int frames)
         }
         done += n;
     }
+    send_notes_out(inst);
 }
 
 static plugin_api_v2_t g_api = {

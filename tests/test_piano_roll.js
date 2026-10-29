@@ -115,6 +115,26 @@ check(true, "a band too small for a keyboard draws nothing and does not throw");
 ctx = page(40, 40, { snoop_feed: feed });
 check(true, "a narrow band does not throw");
 
+/* ---- the voice meters and the transpose ---- */
+p = parse({ snoop_feed: feed, mix_feed: "M,100,50,0,4,2" });
+check(p.levels.join() === "100,50,0" && p.mask === 4 && p.transpose === 2, "the mix feed is parsed");
+p = parse({ snoop_feed: feed });
+check(p.levels.join() === "0,0,0" && p.mask === 0 && p.transpose === 0, "and its absence is not an error");
+for (const bad of ["M", "M,1,2", "X,1,2,3,4,5", 7, "M,a,b,c,d,e"]) parse({ mix_feed: bad });
+ctx = page(128, 40, { snoop_feed: feed, mix_feed: "M,100,50,0,4,2" });
+const mright = 128 - 1 - 12 - 4, mx = mright - require(path.join(__dirname, "..", "canvas.js")).METER_W;     /* "V2" is 12 px wide */
+check(ctx.at(mx, 1) === 1 && ctx.at(mx + 27, 1) === 1 && ctx.at(mx + 27, 2) === 1, "voice 1 at 100% fills its whole meter");
+check(ctx.at(mx + 13, 4) === 1 && ctx.at(mx + 20, 4) === 0, "voice 2 at 50% fills half of its meter");
+check(ctx.at(mx, 7) === 1 && ctx.at(mx + 1, 7) === 1 && ctx.at(mx + 2, 7) === 0 && ctx.at(mx + 4, 7) === 1 && ctx.at(mx + 4, 8) === 0,
+      "voice 3, muted, is a dotted line one pixel high");
+check(ctx.has("[D Min +2]"), "the transpose is shown next to the key: " + JSON.stringify(ctx.texts.map((t) => t.text)));
+ctx = page(128, 40, { snoop_feed: feed, mix_feed: "M,0,0,0,0,-3" });
+check(ctx.has("[D Min -3]") && ctx.at(mx, 1) === 1 && ctx.at(mx + 1, 1) === 0, "a silent voice keeps a one pixel stub; a negative transpose is shown");
+ctx = page(128, 40, { snoop_feed: feed });
+check(ctx.has("[D Min]") && !ctx.has("+"), "no transpose, no mark");
+ctx = page(60, 40, { snoop_feed: feed, mix_feed: "M,100,100,100,0,12" });
+check(true, "a narrow band draws no meters and does not throw");
+
 /* ---- bad input never throws ---- */
 for (const v of [undefined, null, {}, { snoop_feed: 5 }, { snoop_feed: "K" }, { snoop_note: {} }]) page(128, 40, v);
 overlay.drawPage(makeCtx(128, 40), undefined);

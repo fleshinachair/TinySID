@@ -81,7 +81,9 @@ def c_literal(name, text):
 
 h, c = compact(hierarchy), compact(chain).replace('"max":"@MAX@"', '"max":@SUBTUNE_MAX@').replace('"options":"@PAD_OPTIONS@"', '"options":@PAD_OPTIONS@')
 assert c.count("@SUBTUNE_MAX@") <= 1, "only one max_param (subtune) is supported"
-if len(h) > 3500 or len(c) > 3500:
+# a host read buffer is 4096 bytes at the smallest; plugin.c fills the placeholders (the sids folder, the subtune count) and trims the
+# instrument list to fit CHAIN_PARAMS_BUDGET, so the static part has to leave room for the rest
+if len(h) > 3800 or len(c) > 3800:
     sys.exit(f"UI JSON too large for a host get_param buffer: hierarchy {len(h)}, chain_params {len(c)}")
 
 with open(dst, "w", newline="\n") as f:

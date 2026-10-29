@@ -3,11 +3,13 @@
  *
  * Two limits are enforced:
  *   - the built-in demo scans 1,500 frames in under 15 ms (headless is cheap for ordinary tunes);
- *   - on EVERY tune one audio block's share of the scan (ANA_SLICE = 8 frames) stays under 400 us. This is what keeps
- *     the audio thread safe, because real players differ a lot: some use most of a frame's 20,000 cycles, and a
- *     scan that ran all 1,500 frames at once would block the audio thread for as long as the total printed below. */
+ *   - on EVERY tune one audio block's share of the scans (the key scan's ANA_SLICE = 8 frames plus the sound-effect scan's
+ *     FX_SLICE = 8 frames, which run in the same block) stays under 400 us. This is what keeps the audio thread safe,
+ *     because real players differ a lot: some use most of a frame's 20,000 cycles, and a scan that ran all 1,500 frames
+ *     at once would block the audio thread for as long as the total printed below. */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "default_sid.h"
@@ -28,21 +30,26 @@ static double now_ms(void)
 
 static void bench(const unsigned char *data, size_t len, const char *name, int is_demo, int *ok)
 {
-    double total = 0, worst = 0;
+    double total = 0, worst = 0, fx_us_per_frame = 0;
+    if (len >= 4 && memcmp(data, "RSID", 4) == 0) { printf("  %s: RSID, not supported, skipped\n", name); return; }
     for (int i = 0; i < REPS; i++) {
         tinysid_t *t = tinysid_create(44100.0);
         if (tinysid_load(t, data, len) != 0) { printf("  %s: load failed\n", name); *ok = 0; tinysid_destroy(t); return; }
         double t0 = now_ms();
         tinysid_scan_advance(t, FRAMES);
         double ms = now_ms() - t0;
+        double f0 = now_ms();
+        tinysid_fx_scan_advance(t, FRAMES);
+        int fx_frames = tinysid_fx_scan_frames(t);
+        if (fx_frames > 0) fx_us_per_frame += (now_ms() - f0) * 1000.0 / fx_frames / REPS;
         total += ms;
         if (ms > worst) worst = ms;
         if (tinysid_scan_frames(t) != FRAMES) { printf("  %s: scan stopped at %d frames\n", name, tinysid_scan_frames(t)); *ok = 0; }
         tinysid_destroy(t);
     }
-    double avg = total / REPS, slice_us = avg * 1000.0 / FRAMES * SLICE_FRAMES;
+    double avg = total / REPS, slice_us = (avg * 1000.0 / FRAMES + fx_us_per_frame) * SLICE_FRAMES;
     int slice_ok = slice_us < SLICE_BUDGET_US, total_ok = !is_demo || avg < DEMO_BUDGET_MS;
-    printf("  %-18s 1500 frames: avg %6.2f ms, worst %6.2f ms | per audio block (8 frames): %6.1f us  %s%s%s\n", name, avg, worst,
+    printf("  %-18s 1500 frames: avg %6.2f ms, worst %6.2f ms | per audio block (both scans, 8 frames each): %6.1f us  %s%s%s\n", name, avg, worst,
            slice_us, slice_ok && total_ok ? "ok" : "OVER BUDGET",
            !is_demo && avg >= DEMO_BUDGET_MS ? "  (all at once would block the audio thread: that is why it is sliced)" : "",
            "");

@@ -1,83 +1,115 @@
 {
-  "id": "tinysid",
-  "name": "TinySID",
-  "abbrev": "SID",
-  "version": "0.9.0",
-  "description": "Plays Commodore 64 .sid music on a live 6502 + SID core, with voice mutes, filter overrides, tempo sync, key detection, a voice snooper with a piano roll, and a playable voice that uses the song's own instruments, movement included.",
-  "author": "TinySID",
-  "dsp": "dsp.so",
-  "api_version": 2,
-  "standalone": false,
-  "assets": {
-    "path": "sids",
-    "label": "SID files",
-    "extensions": [".sid"],
-    "optional": true,
-    "description": "PSID tunes. Pick one with the SID File knob on the Song page; the built-in tune plays by default."
-  },
-  "capabilities": {
-    "audio_out": true,
-    "audio_in": false,
-    "midi_in": true,
-    "midi_out": false,
-    "aftertouch": false,
-    "chainable": true,
-    "component_type": "sound_generator",
-    "canvas_script": "canvas.js",
-    "feeds": [
-      {"key": "snoop_feed", "name": "Snoop feed", "type": "string", "access": "read"}
-    ],
-    "ui_hierarchy": {
-      "levels": {
-        "root": {
-          "label": "Mixer",
-          "params": [
-            {"key": "v1_vol", "label": "Voice 1", "short_name": "V1", "type": "float", "min": 0, "max": 1, "default": 1, "step": 0.01},
-            {"key": "v2_vol", "label": "Voice 2", "short_name": "V2", "type": "float", "min": 0, "max": 1, "default": 1, "step": 0.01},
-            {"key": "v3_vol", "label": "Voice 3", "short_name": "V3", "type": "float", "min": 0, "max": 1, "default": 1, "step": 0.01},
-            {"key": "out_trim", "label": "Trim", "type": "float", "min": -18, "max": 6, "default": 0, "step": 0.5, "unit": "dB"},
-            {"key": "sync_mode", "label": "Tempo Sync", "short_name": "Sync", "type": "enum",
-             "options": ["Free (PAL 50Hz)", "Free (NTSC 60Hz)", "Host Lock 1x", "Host Lock 0.5x", "Host Lock 2x"],
-             "short_options": ["PAL", "NTSC", "Lock1x", "Lock.5x", "Lock2x"], "default": 0},
-            {"key": "tempo_trim", "label": "Speed", "type": "float", "min": 0.75, "max": 1.5, "default": 1, "step": 0.01, "display_format": "%.2f"},
-            {"level": "song", "label": "Song"},
-            {"level": "pad", "label": "Pad + Filter"}
-          ],
-          "knobs": ["v1_vol", "v2_vol", "v3_vol", "out_trim", "sync_mode", "tempo_trim"]
-        },
-        "song": {
-          "label": "Song",
-          "params": [
-            {"key": "sid_file", "label": "SID File", "short_name": "File", "type": "filepath", "root": "/data/UserData", "start_path": "@SIDS_DIR@", "filter": ".sid", "default": ""},
-            {"key": "subtune", "label": "Subtune", "short_name": "Tune", "type": "int", "min": 1, "max_param": "subtune_count", "default": 1},
-            {"key": "song_bpm", "label": "Est BPM", "short_name": "BPM", "type": "int", "min": 60, "max": 200, "default": 116, "access": "read"},
-            {"key": "song_key", "label": "Key", "type": "enum",
-             "options": ["C Maj", "C Min", "C# Maj", "C# Min", "D Maj", "D Min", "D# Maj", "D# Min", "E Maj", "E Min", "F Maj", "F Min",
-                         "F# Maj", "F# Min", "G Maj", "G Min", "G# Maj", "G# Min", "A Maj", "A Min", "A# Maj", "A# Min", "B Maj", "B Min", "--"],
-             "default": 24, "access": "read"},
-            {"key": "piano_roll", "label": "Piano Roll", "short_name": "Roll", "type": "canvas", "canvas_script": "canvas.js",
-             "as_page": true, "page_first": true, "show_value": false, "extra_keys": ["snoop_feed"]},
-            {"key": "snoop_voice", "label": "Snoop Voice", "short_name": "Voice", "type": "enum",
-             "options": ["Voice 1 (Bass)", "Voice 2 (Lead)", "Voice 3 (Arp/Drm)", "All Voices"],
-             "short_options": ["V1", "V2", "V3", "All"], "default": 1},
-            {"key": "snoop_note", "label": "Note", "type": "int", "min": 0, "max": 127, "default": 0, "access": "read"},
-            {"key": "snoop_level", "label": "Level", "short_name": "Lvl", "type": "int", "min": 0, "max": 100, "default": 0, "unit": "%", "access": "read"}
-          ],
-          "knobs": ["sid_file", "subtune", "song_bpm", "song_key", "snoop_voice", "snoop_note", "snoop_level"]
-        },
-        "pad": {
-          "label": "Pad + Filter",
-          "params": [
-            {"key": "pad_target", "label": "Play On Voice", "short_name": "Voice", "type": "enum", "options": ["Off", "Voice 1", "Voice 2", "Voice 3"], "default": 0},
-            {"key": "pad_sound", "label": "Pad Sound", "short_name": "Sound", "type": "enum", "options": ["Lead"], "dynamic_options": true, "default": 0},
-            {"key": "chip_model", "label": "Chip", "type": "enum", "options": ["6581", "8580"], "default": 0},
-            {"key": "filter_mode", "label": "Filter", "type": "enum", "options": ["Song", "Low Pass", "Band Pass", "High Pass"], "short_options": ["Song", "LP", "BP", "HP"], "default": 0},
-            {"key": "cutoff_bias", "label": "Cutoff", "type": "int", "min": -128, "max": 127, "default": 0},
-            {"key": "res_bias", "label": "Reso", "type": "int", "min": -15, "max": 15, "default": 0}
-          ],
-          "knobs": ["pad_target", "pad_sound", "chip_model", "filter_mode", "cutoff_bias", "res_bias"]
-        }
-      }
+ "id": "tinysid",
+ "name": "TinySID",
+ "abbrev": "SID",
+ "version": "0.9.0",
+ "description": "Plays C64 .sid music on a live 6502 + SID core: mixer, filter and tuning tools, a bar looper, a piano roll, and a pad voice that plays the song's own instruments.",
+ "author": "TinySID",
+ "dsp": "dsp.so",
+ "api_version": 2,
+ "ui_chain": "ui_chain.js",
+ "standalone": false,
+ "assets": {
+  "path": "sids",
+  "label": "SID files",
+  "extensions": [".sid"],
+  "optional": true,
+  "description": "PSID tunes. Pick one with the SID File knob on the Tune + Loop page; the built-in tune plays by default."
+ },
+ "capabilities": {
+  "audio_out": true,
+  "audio_in": false,
+  "midi_in": true,
+  "midi_out": false,
+  "aftertouch": false,
+  "chainable": true,
+  "component_type": "sound_generator",
+  "requires_continuous_processing": true,
+  "canvas_script": "canvas.js",
+  "feeds": [
+   {"key": "snoop_feed", "name": "Snoop feed", "type": "string", "access": "read"},
+   {"key": "mix_feed", "name": "Mix feed", "type": "string", "access": "read"}
+  ],
+  "ui_hierarchy": {
+   "levels": {
+    "root": {
+     "label": "Mixer",
+     "params": [
+      {"key": "v1_vol", "label": "Voice 1", "short_name": "V1", "type": "float", "min": 0, "max": 1, "default": 1, "step": 0.01},
+      {"key": "v2_vol", "label": "Voice 2", "short_name": "V2", "type": "float", "min": 0, "max": 1, "default": 1, "step": 0.01},
+      {"key": "v3_vol", "label": "Voice 3", "short_name": "V3", "type": "float", "min": 0, "max": 1, "default": 1, "step": 0.01},
+      {"key": "sync_mode", "label": "Tempo Sync", "short_name": "Sync", "type": "enum",
+      "options": ["Free (PAL 50Hz)", "Free (NTSC 60Hz)", "Host Lock 1x", "Host Lock 0.5x", "Host Lock 2x"],
+      "short_options": ["PAL", "NTSC", "Lock1x", "Lock.5x", "Lock2x"], "default": 0},
+      {"key": "tempo_trim", "label": "Speed", "type": "float", "min": 0.75, "max": 1.5, "default": 1, "step": 0.01, "display_format": "%.2f"},
+      {"key": "song_bpm", "label": "Est BPM", "short_name": "BPM", "type": "int", "min": 0, "max": 200, "default": 0, "access": "read"},
+      {"key": "song_key", "label": "Key", "type": "enum",
+      "options": ["C Maj", "C Min", "C# Maj", "C# Min", "D Maj", "D Min", "D# Maj", "D# Min", "E Maj", "E Min", "F Maj", "F Min",
+            "F# Maj", "F# Min", "G Maj", "G Min", "G# Maj", "G# Min", "A Maj", "A Min", "A# Maj", "A# Min", "B Maj", "B Min", "--"],
+      "default": 24, "access": "read"},
+      {"key": "piano_roll", "label": "Piano Roll", "short_name": "Roll", "type": "canvas", "canvas_script": "canvas.js",
+      "as_page": true, "page_first": true, "show_value": false, "extra_keys": ["snoop_feed", "mix_feed"]},
+      {"level": "tune", "label": "Tune + Loop"},
+      {"level": "glue", "label": "Mix + Glue"},
+      {"level": "pad", "label": "Pad + Filter"},
+      {"level": "midi", "label": "Notes Out"}
+     ],
+     "knobs": ["v1_vol", "v2_vol", "v3_vol", "sync_mode", "tempo_trim", "song_bpm", "song_key"]
+    },
+    "tune": {
+     "label": "Tune + Loop",
+     "params": [
+      {"key": "loop_length", "label": "Loop Len", "short_name": "Len", "type": "enum", "options": ["Off", "1 Bar", "2 Bars", "3 Bars", "4 Bars", "5 Bars", "6 Bars", "7 Bars", "8 Bars"], "short_options": ["Off", "1", "2", "3", "4", "5", "6", "7", "8"], "default": 0},
+      {"key": "loop_start", "label": "Loop Start", "short_name": "Start", "type": "int", "min": 1, "max": 256, "default": 1},
+      {"key": "loop_nudge", "label": "Loop Nudge", "short_name": "Nudge", "type": "int", "min": 0, "max": 15, "default": 0},
+      {"key": "sid_file", "label": "SID File", "short_name": "File", "type": "filepath", "root": "/data/UserData", "start_path": "@SIDS_DIR@", "filter": ".sid", "default": ""},
+      {"key": "subtune", "label": "Subtune", "short_name": "Tune", "type": "int", "min": 1, "max_param": "subtune_count", "default": 1},
+      {"key": "timbre_lock", "label": "Timbre Lock", "short_name": "Lock", "type": "enum", "options": ["Unlocked", "Lock Timbre"], "short_options": ["Off", "Lock"], "default": 0},
+      {"key": "pitch_snap", "label": "AutoTune", "short_name": "Snap", "type": "enum", "options": ["Off", "A440 Chromatic", "In-Key (Scale)"], "short_options": ["Off", "Chrom", "Key"], "default": 0},
+      {"key": "master_tune", "label": "Master Tune", "short_name": "MTune", "type": "int", "min": -100, "max": 100, "default": 0, "unit": "ct"}
+     ],
+     "knobs": ["loop_length", "loop_start", "loop_nudge", "sid_file", "subtune", "timbre_lock", "pitch_snap", "master_tune"]
+    },
+    "glue": {
+     "label": "Mix + Glue",
+     "params": [
+      {"key": "stereo_spread", "label": "Spread", "short_name": "Spread", "type": "float", "min": 0, "max": 1, "default": 0.5, "step": 0.05},
+      {"key": "ducking_depth", "label": "Duck", "short_name": "Duck", "type": "float", "min": 0, "max": 1, "default": 0, "step": 0.05},
+      {"key": "ducking_release", "label": "Duck Release", "short_name": "DuckRel", "type": "float", "min": 20, "max": 300, "default": 80, "step": 5, "unit": "ms"},
+      {"key": "fx_duck", "label": "FX Duck", "short_name": "FXDuck", "type": "float", "min": 0, "max": 1, "default": 0.4, "step": 0.05},
+      {"key": "filter_pump", "label": "Filter Pump", "short_name": "Pump", "type": "float", "min": 0, "max": 1, "default": 0, "step": 0.05},
+      {"key": "lofi", "label": "Lo-Fi", "short_name": "LoFi", "type": "float", "min": 0, "max": 1, "default": 0, "step": 0.05},
+      {"key": "transpose", "label": "Transpose", "short_name": "Trans", "type": "int", "min": -12, "max": 12, "default": 0, "unit": "st"}
+     ],
+     "knobs": ["stereo_spread", "ducking_depth", "ducking_release", "fx_duck", "filter_pump", "lofi", "transpose"]
+    },
+    "pad": {
+     "label": "Pad + Filter",
+     "params": [
+      {"key": "pad_target", "label": "Play On Voice", "short_name": "Voice", "type": "enum", "options": ["Off", "Voice 1", "Voice 2", "Voice 3"], "default": 0},
+      {"key": "pad_sound", "label": "Pad Sound", "short_name": "Sound", "type": "enum", "options": ["Lead"], "dynamic_options": true, "default": 0},
+      {"key": "filter_mode", "label": "Filter", "type": "enum", "options": ["Song", "Low Pass", "Band Pass", "High Pass"], "short_options": ["Song", "LP", "BP", "HP"], "default": 0},
+      {"key": "cutoff_bias", "label": "Cutoff", "type": "int", "min": -128, "max": 127, "default": 0},
+      {"key": "chip_model", "label": "Chip", "type": "enum", "options": ["6581", "8580"], "default": 0},
+      {"key": "res_bias", "label": "Reso", "type": "int", "min": -15, "max": 15, "default": 0},
+      {"key": "pad_mode", "label": "Pad Mode", "short_name": "Mode", "type": "enum", "options": ["Play", "Control"], "default": 0}
+     ],
+     "knobs": ["filter_mode", "cutoff_bias", "res_bias", "chip_model", "pad_target", "pad_sound", "pad_mode"]
+    },
+    "midi": {
+     "label": "Notes Out",
+     "params": [
+      {"key": "midi_out_v1", "label": "Send Voice 1", "short_name": "Send1", "type": "enum", "options": ["Off", "On"], "default": 0},
+      {"key": "midi_out_ch1", "label": "Voice 1 Channel", "short_name": "Chan1", "type": "int", "min": 1, "max": 16, "default": 1},
+      {"key": "midi_out_v2", "label": "Send Voice 2", "short_name": "Send2", "type": "enum", "options": ["Off", "On"], "default": 0},
+      {"key": "midi_out_ch2", "label": "Voice 2 Channel", "short_name": "Chan2", "type": "int", "min": 1, "max": 16, "default": 2},
+      {"key": "midi_out_v3", "label": "Send Voice 3", "short_name": "Send3", "type": "enum", "options": ["Off", "On"], "default": 0},
+      {"key": "midi_out_ch3", "label": "Voice 3 Channel", "short_name": "Chan3", "type": "int", "min": 1, "max": 16, "default": 3},
+      {"key": "audio_delay", "label": "SID Delay", "short_name": "Delay", "type": "int", "min": 0, "max": 200, "default": 50, "unit": "ms"}
+     ],
+     "knobs": ["midi_out_v1", "midi_out_ch1", "midi_out_v2", "midi_out_ch2", "midi_out_v3", "midi_out_ch3", "audio_delay"]
     }
+   }
   }
+ }
 }

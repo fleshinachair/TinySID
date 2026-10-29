@@ -1,73 +1,66 @@
 # TinySID release notes
 
-## v0.9.0
+## v0.9.0: first public release
 
-First public candidate. TinySID plays C64 `.sid` (PSID) music on a built-in 6502 + SID core inside a Move track slot.
+**Turn any C64 `.sid` into a live instrument on your Ableton Move.** TinySID runs the tune's own 6502 player code on a SID chip
+emulation inside a Schwung track slot. Play it, loop it, borrow its sounds for another tune, and send its voices to your other
+Move tracks.
 
-### What it does
+### Headline features
 
-- **Live 6502 + SID:** the tune's own player code runs on every frame (illegal opcodes included). The SID has 6581 and 8580
-  filter models, ADSR, sync and ring modulation. PSID v1-v4, single-SID, PAL or NTSC; RSID is rejected.
-- **Mixer:** per-voice level (0 mutes a voice), output trim, tempo sync and speed.
-- **Song page:** file browser for `sids/`, subtune, estimated BPM and key/scale readouts (`D Min`, `C Maj`, or `--`).
-- **Snoop:** pick a voice and see the note it is sounding. The first page of the Song level is a **piano roll**: key banner,
-  note name, frequency and tuning error, and a two-octave keyboard with the sounding key lit.
-- **Pad + Filter:** hand one voice to the pads and play it with the song's own instruments, including their pulse-width
-  sweeps and vibrato. Override the tune's filter (low / band / high pass), with cutoff and resonance, and choose the chip model.
-- **Transport:** follows MIDI Start / Stop / Continue (or the host's clock status). Stopping fades the voices out so nothing
-  keeps ringing.
-- **Host Lock:** the tune is phase-locked to the Move's MIDI clock. Details below.
-- **Background scan:** a silent second engine plays each tune for 5 minutes of music (a few frames per audio block) to find
-  the key, the tempo and the per-voice instrument lists.
+**Borrow one SID's sound for another tune.** Play a tune whose instruments you love, turn **Timbre Lock** on (Tune + Loop page),
+then load a different `.sid`. The new tune plays its own notes with the first tune's instruments: waveforms, pulse widths,
+envelopes and filter. Drums and the driver's hard restarts still come through, so it keeps its groove. Mix Hubbard's bass with
+Galway's melody, or dress a quiet tune in Commando's sound.
 
-### Host Lock phase lock
+**Send the SID voices to your Move tracks (Notes Out).** Each of the three voices can go out as MIDI on its own channel and play
+any instrument on another Move track: a Drift pad doubling the lead, a drum rack following the bass. The tune's tuning travels with
+the notes on pitch bend, so a tune that sits 37 cents sharp of A = 440 Hz is played 37 cents sharp on the other track too. Switch each voice on with
+the pads (second row in Control mode) or the Notes Out page. The switches are separate from the audio mutes, so you can hear only
+the Move instruments, only the SID, or both. **SID Delay** holds TinySID's own sound back (50 ms to start with, up to 200) so it
+lands with the tracks it is playing. It only applies while a voice is being sent.
 
-Host Lock used to scale the frame rate by `host tempo / song tempo`, which drifts against a clip that loops for a long time.
-It now counts the tune's frames from MIDI clock ticks (24 per quarter note): a 16th-note row is 6 ticks, and after K ticks
-exactly `floor(K * frames_per_row / 6) + 1` frames have played, in integer arithmetic. Start resets the count and the first
-tick plays frame 1, so the tune's first downbeat lands on Step 1 of the clip. The Move's tempo never enters the count.
+### Also in this release
 
-- The tune's row length comes from a built-in table (Commando subtune 1 = 6 frames per row = exactly 125 BPM) or from
-  the scan, and the BPM readout is a whole number.
-- Stop holds the tune and Continue resumes in place. If the clock disappears for 2 seconds the tune waits for it. With no clock
-  at all it free-runs after 1 second so it is never silent.
-- A Speed (`tempo_trim`) other than 1.0, or a typed BPM override, leaves the tick grid and scales the rate instead.
-- Tested over 64 bars at 120 and 125 BPM with jittered ticks, a mid-run tempo change, Half and 2x, Start, Stop and Continue:
-  zero frame drift at bar 64.
+- **Control mode turns the pads into a performance surface.** Bottom row: mute voices 1 to 3, unmute all, transpose down / up / reset,
+  and **loop capture**. Press it to start a loop on the bar that's playing, and again to end it there. Second row: Notes Out per
+  voice. Top row: a drum kit of the tune's own **sound effects**, found automatically among its subtunes and playable over the song,
+  louder the harder you hit.
+- **Play the tune's own instruments on the pads.** Hand any voice to the pads and play it with the song's real instruments,
+  pulse-width sweeps and vibrato included. The pad stays in tune with the song, even on tunes that aren't tuned to A = 440 Hz.
+- **AutoTune** learns each tune's own tuning and brings it onto the grid (or the tune's key) without flattening vibrato, slides or
+  drum sweeps. **Master Tune** shifts the grid by up to 100 cents.
+- **Locked to the Move.** Host Lock follows the Move's clock without drift, measured at zero frames out after 64 bars. The bar looper repeats any
+  1 to 8 bars note for note.
+- **Mix + Glue:** stereo Spread, sidechain Duck and Filter Pump (they keep the tune's own beat when the Move is stopped), Lo-Fi,
+  Transpose and FX Duck.
+- **Piano roll** on the first page: the key, the note each voice is playing and its tuning, and a keyboard.
+- Louder output, and the tune keeps running even when every voice is muted.
 
-### Changes since v0.5.0
+### Setting up Notes Out
 
-- **Output level:** TinySID was about 10 dB hotter than Schwung's other generators (Commando peaked at -0.1 dBFS). A fixed
-  -9 dB base gain now puts a tune near -22 dBFS RMS, level with the others. `out_trim` still goes up to +6 dB on top.
-- **Piano roll:** it is now a canvas *page* that is the first page of the Song level, so it shows as soon as you open the
-  level (before it needed a click and looked inert).
-- **Layout:** the Snoop dials moved to the second line of the Song page, Subtune moved from the Mixer to the Song page,
-  and Pad and Filter share one page. The Pitch and Cents dials are gone (the roll still shows them).
-- **Tempo:** a loaded file picks Free PAL or Free NTSC from its header. Loading an NTSC tune used to play it at PAL speed.
-- **BPM:** one value from the whole-song scan, so it no longer wanders on tunes like Cybernoid II. Catalogued tunes use
-  the table.
-- **Pad sounds:** the list is the instruments the song really uses on the voice, merged when they differ only in sustain
-  level or pulse width. Late instruments (such as Commando's sax lead) are found by the 5-minute scan. The built-in
-  Saw / Pulse / Triangle sounds are gone.
-- **DC offset:** an 8 Hz output high-pass removes the SID's unipolar DC.
-- **Host warnings:** the `bad param preset=0` warning is fixed.
+1. Put TinySID on its own track (for example track 4) and turn that track's **MIDI In off**. Otherwise it hears its own notes
+   coming back.
+2. Give tracks 1 to 3 an instrument each and set their MIDI In to channels 1, 2 and 3 (the defaults Notes Out sends on).
+3. Select TinySID's own track on the Move before opening its screen. The Move lights a pad for every note on its selected track,
+   and that would flicker over TinySID's pad colours.
+4. Switch voices on with the second row of pads, and adjust **SID Delay** by ear until everything lines up.
 
 ### Known limits
 
-- RSID files are rejected; only single-SID PSID v1-v4.
-- Combined waveforms are the AND of their parts. No digi / `$D418` sample timing, because the CPU runs one whole `play` call
-  per tick rather than cycle-interleaved with the SID.
-- Key and tempo are estimates: tunes that modulate show the key most windows agree on, and an unknown tune's BPM assumes
-  16th-note rows.
-- The piano roll and the page layout were checked against the Schwung UI's own page planner, contract validator and drawing
-  code, and the module was run on a Move, but the OLED was only looked at on the device by the author.
+- Single-SID PSID files only. RSID files (tunes that drive their own interrupts) aren't supported.
+- No sample playback through the volume register (digi drums), and combined waveforms are approximate.
+- Notes Out assumes the receiving instrument's pitch-bend range is ±2 semitones (the usual default).
+- SID Delay is one value for all three voices. If your instruments respond at different speeds, set it for the slowest.
+- Key and tempo readouts are estimates.
 
 ### Install
 
-Download `TinySID.tar.gz` from the release and install it with Schwung's module manager, or unpack it so the files sit in
-`/data/UserData/schwung/modules/sound_generators/tinysid/`. Put your own `.sid` files in its `sids/` folder. The release
-package contains no copyrighted tunes: the default tune is a bundled original demo.
+Download `TinySID.tar.gz` from the release and install it with Schwung's module manager, or unpack it into
+`/data/UserData/schwung/modules/sound_generators/tinysid/`. Put your own `.sid` files in its `sids/` folder. The package contains
+no copyrighted tunes: the built-in tune is an original demo.
 
-### Files in the package
+Files: `dsp.so`, `module.json`, `ui_chain.js` (the module's own screen), `canvas.js` (piano roll), `help.json`, `release.json`.
+Delete `ui_chain.js` to fall back to Schwung's standard editor.
 
-`dsp.so`, `module.json`, `canvas.js` (piano roll), `help.json`, `release.json`.
+More detail: [README](README.md) and [docs/TECHNICAL.md](docs/TECHNICAL.md).

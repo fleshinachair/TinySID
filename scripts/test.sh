@@ -18,6 +18,7 @@ rm -rf "$OUT"
 mkdir -p "$OUT" "$GEN"
 cp "$ROOT/src/dsp/demo_sid.h" "$GEN/default_sid.h"       # tests always run against the bundled demo
 "$PY" "$ROOT/tools/gen_ui_json.py" "$ROOT/module.json" "$GEN/ui_json.h" --json="$GEN/json"
+"$PY" "$ROOT/tools/gen_ui_chain.py" "$ROOT/src/ui/ui_chain.template.js" "$ROOT/canvas.js" "$GEN/json/ui_hierarchy.json" "$GEN/ui_chain.js"
 
 if [ -n "${CC:-}" ]; then read -r -a CCV <<< "$CC"
 elif command -v gcc >/dev/null 2>&1; then CCV=(gcc)
@@ -68,6 +69,7 @@ if command -v node >/dev/null 2>&1; then
     node "$ROOT/tests/test_piano_roll.js" | tail -n 1
     node "$ROOT/tests/test_piano_roll.js" >/dev/null || status=1
     node "$ROOT/tests/test_host_pages.mjs" || status=1
+    node "$ROOT/tests/test_ui_chain.mjs" || status=1
 else
     echo "node not found: piano roll screen test skipped"
 fi

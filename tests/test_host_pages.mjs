@@ -37,23 +37,30 @@ const check = (cond, what) => { checks++; if (!cond) { failed++; console.log("  
 const report = validateContract({ id: "tinysid", hierarchy, chainParams, capabilities });
 const bad = report.findings.filter((f) => f.level === "error" || f.level === "warn");
 check(bad.length === 0, "contract validator has no errors or warnings: " + bad.map((f) => f.rule + " (" + f.message.slice(0, 90) + ")").join("; "));
-check(chainParams.some((p) => p.key === "snoop_feed" && p.type === "string" && p.access === "read"), "the feed is declared as a read-only string");
+check(["snoop_feed", "mix_feed"].every((k) => chainParams.some((p) => p.key === k && p.type === "string" && p.access === "read")), "both feeds are declared as read-only strings");
 check(capabilities.canvas_script === "canvas.js", "capabilities.canvas_script names the script");
 
 /* ---- the host's page planner: what pages will appear, in what order ---- */
 const plan = planPages({ hierarchy, chainParams });
 const pages = plan.pages;
-const song = pages.filter((p) => p.level === "song");
-check(song.length === 2, "the Song level has two pages: the piano roll and its knob grid (found " + song.length + ")");
-check(song[0] && song[0].canvas && song[0].canvas.key === "piano_roll", "the piano roll page comes FIRST (page_first), so entering Song shows it");
-check(song[0] && song[0].canvas.script === "canvas.js" && JSON.stringify(song[0].canvas.extraKeys) === '["snoop_feed"]', "it runs canvas.js and reads the snoop_feed key");
-const knobs = ["sid_file", "subtune", "song_bpm", "song_key", "snoop_voice", "snoop_note", "snoop_level"];
-check(song.every((p) => JSON.stringify(p.keys) === JSON.stringify(knobs)), "both pages carry the song encoders: file, subtune, BPM, key on the first line; the snoop dials on the second");
-check(song[1] && !song[1].canvas, "the second Song page is the ordinary knob grid");
+const rootPages = pages.filter((p) => p.level === "root");
+const mixerKeys = ["v1_vol", "v2_vol", "v3_vol", "sync_mode", "tempo_trim", "song_bpm", "song_key"];
+check(rootPages.length === 2, "the Mixer level has two pages: the piano roll and its knob grid (found " + rootPages.length + ")");
+check(rootPages[0] && rootPages[0].canvas && rootPages[0].canvas.key === "piano_roll", "the piano roll page comes FIRST (page_first), so opening the module shows it");
+check(rootPages[0] && rootPages[0].canvas.script === "canvas.js" && JSON.stringify(rootPages[0].canvas.extraKeys) === '["snoop_feed","mix_feed"]', "it runs canvas.js and reads the snoop_feed and mix_feed keys");
+check(rootPages.every((p) => JSON.stringify(p.keys) === JSON.stringify(mixerKeys)), "both pages carry the mixer encoders, so the voice levels move while you watch the meters: " + JSON.stringify(rootPages.map((p) => p.keys)));
+check(rootPages[1] && !rootPages[1].canvas, "the second Mixer page is the ordinary knob grid");
+check(!pages.some((p) => p.level === "song"), "there is no Song level any more");
 const padPage = pages.filter((p) => p.level === "pad");
-check(padPage.length === 1 && JSON.stringify(padPage[0].keys) === JSON.stringify(["pad_target", "pad_sound", "chip_model", "filter_mode", "cutoff_bias", "res_bias"]), "pad and filter share one page");
+check(padPage.length === 1 && JSON.stringify(padPage[0].keys) === JSON.stringify(["filter_mode", "cutoff_bias", "res_bias", "chip_model", "pad_target", "pad_sound", "pad_mode"]), "filter, chip, the pad and its mode share one page, the filter trio inside one row (the host leaves the author's order alone)");
 check(!pages.some((p) => p.keys.includes("piano_roll") || p.keys.includes("snoop_feed")), "neither the canvas nor the feed becomes a knob cell");
-check(pages.map((p) => p.level).join() === "root,song,song,pad", "page order: " + pages.map((p) => p.level).join());
+const gluePage = pages.filter((p) => p.level === "glue");
+check(gluePage.length === 1 && JSON.stringify(gluePage[0].keys) === JSON.stringify(["stereo_spread", "ducking_depth", "ducking_release", "fx_duck", "filter_pump", "lofi", "transpose"]), "Mix + Glue is one page, with FX Duck and Transpose: " + JSON.stringify(gluePage.map((p) => p.keys)));
+const tunePage = pages.filter((p) => p.level === "tune");
+check(tunePage.length === 1 && JSON.stringify(tunePage[0].keys) === JSON.stringify(["loop_length", "loop_start", "loop_nudge", "sid_file", "subtune", "timbre_lock", "pitch_snap", "master_tune"]), "Tune + Loop is one page, with Timbre Lock, AutoTune and Master Tune after Subtune: " + JSON.stringify(tunePage.map((p) => p.keys)));
+check(pages.map((p) => p.level).join() === "root,root,tune,glue,pad,midi", "page order: " + pages.map((p) => p.level).join());
+const midiPage = pages.filter((p) => p.level === "midi");
+check(midiPage.length === 1 && JSON.stringify(midiPage[0].keys) === JSON.stringify(["midi_out_v1", "midi_out_ch1", "midi_out_v2", "midi_out_ch2", "midi_out_v3", "midi_out_ch3", "audio_delay"]), "Notes Out is its own page: a send and a channel for each voice, and the SID delay: " + JSON.stringify(midiPage.map((p) => p.keys)));
 check((plan.warnings || []).length === 0, "the planner raised no warnings: " + JSON.stringify(plan.warnings));
 
 /* ---- the page script, loaded the way the host loads it, drawn through the host's real frame context ---- */
@@ -79,7 +86,7 @@ for (const b of bands) {
     const screen = hostScreen();
     const f = frameCtx(screen, { x: 0, y: b.y, w: 128, h: b.h });
     overlay.drawPage(f, {
-        key: "piano_roll", keys: knobs, touched: -1, nowMs: 0, width: 128, height: b.h, state: {},
+        key: "piano_roll", keys: mixerKeys, touched: -1, nowMs: 0, width: 128, height: b.h, state: {},
         values: { snoop_voice: "Voice 2 (Lead)", snoop_note: "50", snoop_level: "80", snoop_feed: "K,50,1,5,-3,80,52,57" }
     });
     check(f.clipped() === 0, `band ${b.h} px high: nothing is clipped, truncated or dropped (${f.clipped()})`);

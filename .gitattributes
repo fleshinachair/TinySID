@@ -1,3 +1,5 @@
 # scripts must stay LF or bash fails on Windows checkouts
 *.sh text eol=lf
 *.py text eol=lf
+# the Move reads module.json as shipped: LF, and the byte budget counts it
+module.json text eol=lf

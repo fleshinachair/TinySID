@@ -9,7 +9,10 @@
  * Everything shown comes from one packed string the DSP formats (src/dsp/tinysid.c, snoop_feed), because the host
  * refreshes a page's extra keys only a few times a second:
  *     K,<note>,<voice 0..3>,<key 0..24>,<cents>,<level %>,<recent notes, newest first>
- * where key = tonic * 2 + (minor ? 1 : 0), 24 = unknown, note 0 = idle, voice 3 = all voices.
+ * where key = tonic * 2 + (minor ? 1 : 0), 24 = unknown, note 0 = idle, voice 3 = all voices (the key is shown as the song
+ * is transposed). A second string, mix_feed, carries the three voices' levels and which are muted from the pads:
+ *     M,<level 1 %>,<level 2 %>,<level 3 %>,<mute mask>,<transpose>
+ * They are drawn as three small meters in the banner (a muted voice is a dotted line), with the transpose next to the key.
  *
  * Layout (adapts to the band's height): key banner and voice, the note with its frequency and tuning error, and a
  * two-octave keyboard centred on the sounding octave. White keys are hollow, black keys solid, the sounding key is
@@ -50,7 +53,7 @@
     /* The page's data. The feed wins; the plain parameter values are the fallback when it has not arrived yet. */
     function parse(values) {
         var v = values || {};
-        var s = { note: 0, voice: 1, key: 24, cents: 0, level: 0, recent: [] };
+        var s = { note: 0, voice: 1, key: 24, cents: 0, level: 0, recent: [], levels: [0, 0, 0], mask: 0, transpose: 0 };
         s.note = Math.max(0, Math.min(127, toInt(v.snoop_note, 0)));
         s.cents = toInt(v.snoop_cents, 0);
         s.level = toInt(v.snoop_level, 0);
@@ -68,7 +71,31 @@
                 }
             }
         }
+        if (typeof v.mix_feed === "string" && v.mix_feed.charAt(0) === "M") {
+            var m = v.mix_feed.split(",");
+            if (m.length >= 6) {
+                for (var j = 0; j < 3; j++) s.levels[j] = Math.max(0, Math.min(100, toInt(m[1 + j], 0)));
+                s.mask = toInt(m[4], 0);
+                s.transpose = Math.max(-12, Math.min(12, toInt(m[5], 0)));
+            }
+        }
         return s;
+    }
+
+    var METER_W = 28;
+
+    /* Three one-pixel-high-ish bars (2 px, 1 px apart): a voice's level, or a dotted line when it is muted. Returns the left edge. */
+    function drawMeters(ctx, right, y, s) {
+        var x = right - METER_W;
+        for (var i = 0; i < 3; i++) {
+            var yy = y + i * 3;
+            if ((s.mask >> i) & 1) {
+                for (var k = 0; k < METER_W; k += 4) ctx.fillRect(x + k, yy, 2, 1, 1);
+            } else {
+                ctx.fillRect(x, yy, Math.max(1, Math.round(s.levels[i] * METER_W / 100)), 2, 1);
+            }
+        }
+        return x;
     }
 
     function tw(ctx, text) {
@@ -137,8 +164,11 @@
         var top;
 
         if (H >= 34) {                                    /* banner, note line, keyboard */
-            ctx.print(1, 0, "[" + key + "]", 1);
+            var trans = s.transpose ? " " + (s.transpose > 0 ? "+" : "") + s.transpose : "";
+            ctx.print(1, 0, "[" + key + trans + "]", 1);
             if (voice) ctx.print(W - 1 - tw(ctx, voice), 0, voice, 1);
+            var meterRight = W - 1 - tw(ctx, voice || "All") - 4;
+            if (meterRight - METER_W > tw(ctx, "[" + key + trans + "]") + 4) drawMeters(ctx, meterRight, 1, s);
             ctx.print(1, 9, tuned + cents, 1);
             top = 19;
         } else if (H >= 20) {                             /* one compact line */
@@ -156,6 +186,6 @@
     /* test hook: lets a Node script drive the same code */
     if (typeof module !== "undefined" && module.exports) {
         module.exports = { overlay: globalThis.canvas_overlay, parse: parse, windowStart: windowStart, noteName: noteName,
-                           noteHz: noteHz, drawKeys: drawKeys, KEY_NAMES: KEY_NAMES };
+                           noteHz: noteHz, drawKeys: drawKeys, KEY_NAMES: KEY_NAMES, METER_W: METER_W };
     }
 })();

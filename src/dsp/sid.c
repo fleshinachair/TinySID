@@ -76,10 +76,12 @@ void sid_reset(sid_t *s)
     memset(s->reg, 0, sizeof(s->reg));
     for (int i = 0; i < 3; i++) {
         sid_voice_t *v = &s->v[i];
-        float gain = v->gain, target = v->gain_target;
+        float gain = v->gain, target = v->gain_target, pl = v->pan_l, pr = v->pan_r;
         memset(v, 0, sizeof(*v));
         v->gain = gain;
         v->gain_target = target;
+        v->pan_l = pl;
+        v->pan_r = pr;
         v->noise = 0x7FFFF8;
         v->state = ST_RELEASE;
         v->hold_zero = 1;
@@ -98,7 +100,7 @@ void sid_init(sid_t *s, double clock_hz, double sample_rate, sid_model_t model)
     s->sample_rate = sample_rate;
     s->model = model;
     s->gain_coef = 1.0f - expf(-1.0f / (0.004f * (float)sample_rate));
-    for (int i = 0; i < 3; i++) s->v[i].gain = s->v[i].gain_target = 1.0f;
+    for (int i = 0; i < 3; i++) { s->v[i].gain = s->v[i].gain_target = 1.0f; s->v[i].pan_l = s->v[i].pan_r = 1.0f; }
     sid_reset(s);
 }
 
@@ -113,6 +115,13 @@ void sid_set_voice_gain(sid_t *s, int voice, float gain)
 {
     if (voice < 0 || voice > 2) return;
     s->v[voice].gain_target = gain;
+}
+
+void sid_set_voice_pan(sid_t *s, int voice, float left, float right)
+{
+    if (voice < 0 || voice > 2) return;
+    s->v[voice].pan_l = left;
+    s->v[voice].pan_r = right;
 }
 
 void sid_snap_voice_gains(sid_t *s)
@@ -257,7 +266,7 @@ static void update_filter(sid_t *s)
     s->filter_dirty = 0;
 }
 
-void sid_render(sid_t *s, float *out, int n)
+void sid_render(sid_t *s, float *left, float *right, int n)
 {
     const double cps = s->clock_hz / s->sample_rate;
     const int is6581 = s->model == SID_MODEL_6581;
@@ -279,16 +288,25 @@ void sid_render(sid_t *s, float *out, int n)
         }
         if (steps) for (int j = 0; j < 3; j++) acc[j] /= (float)steps;
 
-        float direct = 0.0f, filt_in = 0.0f;
+        float direct_l = 0.0f, direct_r = 0.0f, filt_in = 0.0f, fpan_l = 0.0f, fpan_r = 0.0f;
+        int routed = 0;
         const uint8_t routing = s->reg[0x17];
         for (int j = 0; j < 3; j++) {
             sid_voice_t *v = &s->v[j];
             float d = v->gain_target - v->gain;
             v->gain = fabsf(d) < 1e-5f ? v->gain_target : v->gain + d * s->gain_coef;
             float x = acc[j] * v->gain;
-            if (routing & (1u << j)) filt_in += x;
-            else if (!(j == 2 && (s->reg[0x18] & 0x80))) direct += x;   /* voice 3 off */
+            if (routing & (1u << j)) {
+                filt_in += x;
+                fpan_l += v->pan_l;
+                fpan_r += v->pan_r;
+                routed++;
+            } else if (!(j == 2 && (s->reg[0x18] & 0x80))) {                 /* voice 3 off */
+                direct_l += x * v->pan_l;
+                direct_r += x * v->pan_r;
+            }
         }
+        if (routed) { fpan_l /= (float)routed; fpan_r /= (float)routed; }
 
         if (s->filter_dirty) update_filter(s);
         float x = is6581 ? sat(filt_in * 1.5f) * (1.0f / 1.5f) : filt_in;
@@ -307,7 +325,8 @@ void sid_render(sid_t *s, float *out, int n)
         if (mode & 0x20) fout += bp;
         if (mode & 0x40) fout += hp;
 
-        float mix = (direct + fout) * ((float)(mode & 0x0F) * (1.0f / 15.0f)) * MIX_SCALE;
-        out[i] = mix;
+        float vol = ((float)(mode & 0x0F) * (1.0f / 15.0f)) * MIX_SCALE;
+        left[i] = (direct_l + fout * fpan_l) * vol;
+        right[i] = (direct_r + fout * fpan_r) * vol;
     }
 }

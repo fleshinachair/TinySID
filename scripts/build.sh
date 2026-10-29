@@ -43,7 +43,8 @@ else
 fi
 
 "$PY" "$ROOT/tools/check_manifest.py" "$ROOT/module.json"
-"$PY" "$ROOT/tools/gen_ui_json.py" "$ROOT/module.json" "$GEN/ui_json.h"
+"$PY" "$ROOT/tools/gen_ui_json.py" "$ROOT/module.json" "$GEN/ui_json.h" --json="$GEN/json"
+"$PY" "$ROOT/tools/gen_ui_chain.py" "$ROOT/src/ui/ui_chain.template.js" "$ROOT/canvas.js" "$GEN/json/ui_hierarchy.json" "$STAGE/ui_chain.js"
 
 "${CCV[@]}" -std=c11 -O2 -Wall -Wextra -Werror -fPIC -shared -fvisibility=hidden \
     -I"$ROOT/src/dsp" -I"$GEN" \
@@ -51,7 +52,7 @@ fi
     -Wl,--strip-all -o "$STAGE/dsp.so" -lm
 
 cp "$ROOT/module.json" "$STAGE/module.json"
-cp "$ROOT/canvas.js" "$STAGE/canvas.js"              # the piano roll page on the Song level
+cp "$ROOT/canvas.js" "$STAGE/canvas.js"              # the piano roll page (also inlined into ui_chain.js)
 cp "$ROOT/help.json" "$STAGE/help.json"
 cp "$ROOT/release.json" "$STAGE/release.json"
 tar -czf "$BUILD/TinySID.tar.gz" -C "$BUILD/stage" tinysid
@@ -60,6 +61,7 @@ echo
 echo "dsp.so          $(wc -c < "$STAGE/dsp.so") bytes"
 echo "module.json     $(wc -c < "$STAGE/module.json") bytes"
 echo "canvas.js       $(wc -c < "$STAGE/canvas.js") bytes"
+echo "ui_chain.js     $(wc -c < "$STAGE/ui_chain.js") bytes"
 echo "help.json       $(wc -c < "$STAGE/help.json") bytes"
 echo "release.json    $(wc -c < "$STAGE/release.json") bytes"
 echo "TinySID.tar.gz  $(wc -c < "$BUILD/TinySID.tar.gz") bytes"

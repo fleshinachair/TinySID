@@ -111,6 +111,38 @@ static size_t fx_tone(uint8_t *out, int variant, int songs, uint32_t speed, uint
     return fx_psid(out, c.b, c.n, FX_LOAD, FX_LOAD, play, songs, speed, flags);
 }
 
+/* A tune with sound effects: subtune 1 is a song (a saw at about 240 Hz on voice 1 that never stops), subtunes 2 and 3 are
+ * effects (a saw at about 720 Hz that gates on for 20 frames and then off), and any subtune from 4 up is silent. */
+static inline size_t fx_effects(uint8_t *out, int songs)
+{
+    fx_code_t c = { {0}, 0 };
+    fx_byte(&c, 0x85); fx_byte(&c, 0x02);                        /* STA $02: A = subtune - 1 */
+    fx_store(&c, 0x00, 0x03);                                    /* frame counter (a zero page store through the absolute form) */
+    fx_store(&c, 0x0F, 0xD418);
+    fx_store(&c, 0x00, 0xD405);
+    fx_store(&c, 0xF0, 0xD406);
+    fx_store(&c, 0x10, 0xD401);
+    fx_byte(&c, 0x60);                                           /* init: RTS */
+
+    uint16_t play = (uint16_t)(FX_LOAD + c.n);
+    const uint8_t body[] = {
+        0xE6, 0x03, 0xD0, 0x02, 0xC6, 0x03,                      /*    INC $03, but stay at 255 (an effect does not start again) */
+        0xA5, 0x02,                                              /*  2 LDA $02 */
+        0xF0, 0x15,                                              /*  4 BEQ music */
+        0xC9, 0x03,                                              /*  6 CMP #3 */
+        0xB0, 0x17,                                              /*  8 BCS off: subtunes 4 and up are silent */
+        0xA5, 0x03,                                              /* 10 LDA $03 */
+        0xC9, 0x14,                                              /* 12 CMP #20 */
+        0xB0, 0x11,                                              /* 14 BCS off */
+        0xA9, 0x30, 0x8D, 0x01, 0xD4,                            /* 16 an effect's pitch */
+        0xA9, 0x21, 0x8D, 0x04, 0xD4, 0x60,                      /* 21 gate on */
+        0xA9, 0x21, 0x8D, 0x04, 0xD4, 0x60,                      /* 27 music: gate on */
+        0xA9, 0x20, 0x8D, 0x04, 0xD4, 0x60                       /* 33 off */
+    };
+    for (size_t i = 0; i < sizeof(body); i++) fx_byte(&c, body[i]);
+    return fx_psid(out, c.b, c.n, FX_LOAD, FX_LOAD, play, songs, 0, 0);
+}
+
 /* A tune that plays `notes` (MIDI numbers) in a loop on voice 1, re-gating every frame. Used for key detection. */
 static inline size_t fx_melody(uint8_t *out, const int *notes, int n)
 {
