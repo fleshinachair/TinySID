@@ -1,10 +1,16 @@
 # TinySID
 
-Play classic Commodore 64 music on your Ableton Move.
+Turn classic Commodore 64 music into a live instrument on your Ableton Move.
 
-TinySID is a Schwung sound generator that runs `.sid` tunes on a built-in
-C64 chip, live. Mute voices, reshape the filter, jam on the pads with the song's own instruments, and lock the tune to
-your Move's tempo so it stays in time with your clips.
+TinySID is a Schwung sound generator that runs `.sid` tunes on a built-in C64 chip, live, locked to your Move's tempo.
+
+- **Send the SID voices to your Move tracks.** Each of the three voices can go out as MIDI on its own channel and play any
+  instrument on another track, with the tune's own tuning carried on pitch bend. Double a Hubbard bass line with a Drift patch, or
+  drive a drum rack from the SID's percussion. See [Notes Out](#notes-out).
+- **Borrow one SID's sound for another tune.** Lock a tune's instruments with **Timbre Lock**, load a different `.sid`, and it
+  plays its own notes with the first tune's sound.
+- **Play it from the pads.** Mute voices, transpose, capture a loop on the bar you're on, fire the tune's own sound effects, or
+  hand a voice to the pads and play the song's real instruments.
 
 Version 0.9.0. See the [release notes](RELEASE_NOTES.md).
 
@@ -18,7 +24,7 @@ A built-in demo tune plays until you choose one. No commercial tunes are include
 
 ## Using it
 
-**Mixer.** Set the level of each of the three SID voices (0 mutes it), the output trim, and the tempo mode. The
+**Mixer.** Set the level of each of the three SID voices (0 mutes it) and the tempo mode. The
 estimated **BPM** and **key** of the tune are read out here too (they show **0** and **--** until they are known).
 
 **Tune + Loop.** Pick a tune (**SID File**) and subtune. TinySID listens to the tune in the background for a few seconds to
@@ -56,6 +62,7 @@ of its own over the song, so the song carries on, and up to three can sound at o
 tuning and transpose, but not its mutes. The song dips for a moment as one hits (**FX Duck**, on the Mix + Glue page; 0 turns it off). Not
 every tune has effects as subtunes: some fire them from inside the song, and those cannot be played this way.
 
+<a id="notes-out"></a>
 **Notes Out.** Sends the SID voices' notes as MIDI, so other Move tracks can play what the SID plays. In Pad Mode Control the
 **row above the controls** has three pads, one per voice: green while that voice is being sent, grey when it is not; press to switch.
 They are separate from the mute pads, so you can mute a voice in the audio and still send it, or the other way round. The **Notes
