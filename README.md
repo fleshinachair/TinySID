@@ -2,115 +2,99 @@
 
 Turn classic Commodore 64 music into a live instrument on your Ableton Move.
 
-TinySID is a Schwung sound generator that runs `.sid` tunes on a built-in C64 chip, live, locked to your Move's tempo.
+TinySID is a Schwung sound generator. It runs `.sid` tunes on a built-in 6502 + SID
+chip emulation, live and locked to your Move's tempo.
 
-- **Send the SID voices to your Move tracks.** Each of the three voices can go out as MIDI on its own channel and play any
-  instrument on another track, with the tune's own tuning carried on pitch bend. See [Notes Out](#notes-out).
-- **Borrow one SID's sound for another tune.** Lock a tune's instruments with **Timbre Lock**, load a different `.sid`, and it
-  plays its own notes with the first tune's sound.
-- **Play it from the pads.** Mute voices, transpose, capture a loop on the bar you're on, fire the tune's own sound effects, or
-  hand a voice to the pads and play the song's real instruments.
+- **Send SID voices to other tracks.** Each voice can go out as MIDI and play any Move instrument, tuning included.
+- **Borrow one tune's sound for another.** Lock a tune's instruments with **Timbre Lock**, then load a different `.sid`.
+- **Play it from the pads.** Mute voices, transpose, capture loops, fire the tune's sound effects, or play its real instruments.
 
-Version 0.9.0. See the [release notes](RELEASE_NOTES.md).
+Version 0.9.0 · [Release notes](RELEASE_NOTES.md)
 
 ## Install
 
-1. Install `TinySID.tar.gz` from the releases page with Schwung's module manager.
-2. Copy your own `.sid` files into the module's `sids` folder.
+1. Install `TinySID.tar.gz` from the [releases page](https://github.com/fleshinachair/TinySID/releases) with Schwung's module
+   manager (or unpack it into `/data/UserData/schwung/modules/sound_generators/tinysid/`).
+2. Copy your `.sid` files into the module's `sids` folder (Schwung's web manager or `scp`).
 3. Load TinySID in a track slot and pick a tune with **SID File** on the Tune + Loop page.
 
 A built-in demo tune plays until you choose one. No commercial tunes are included.
 
-## The pages
+## Pages
 
-- **Mixer.** The level of each voice (0 mutes it), the tempo mode, and the tune's estimated BPM and key (they read **0** and
-  **--** until known). Its first screen is a piano roll: the note sounding now, its tuning error in cents, and a meter per voice.
-- **Tune + Loop.** **SID File** (hold its knob and click the jog wheel to open the list, turn to pick, click), **Subtune**,
-  **Timbre Lock**, **AutoTune**, **Master Tune**, and the loop controls.
-- **Mix + Glue.** Stereo **Spread**, **Duck** and **DuckRel** (the tune pumps on every beat), **Filter Pump**, **Lo-Fi**,
-  **Transpose** (up to an octave), and **FX Duck**. Duck and Filter Pump follow the Move's clock, or the tune's own beat when the
-  Move is stopped.
-- **Pad + Filter.** **Play On Voice** hands one voice to the pads, played with the song's own instruments (**Pad Sound**) and
-  kept in tune with the song. **Filter**, **Cutoff** and **Reso** replace or offset the tune's filter. **Chip** picks the 6581
-  or 8580. **Pad Mode** switches the pads between playing and Control.
-- **Notes Out.** Send each voice as MIDI, its channel, and **SID Delay**. See below.
-
-## Control mode
-
-Set **Pad Mode** to Control and the pads become buttons, lit in their own colours:
-
-| Pads | What they do |
+| Page | Controls |
 |---|---|
-| Bottom row, 1 to 3 | Mute / unmute voice 1, 2, 3 |
-| Bottom row, 4 to 7 | Unmute all, transpose down, transpose up, transpose back to 0 |
-| Bottom row, 8 | **Loop capture** (below) |
-| Second row, 1 to 3 | Send voice 1, 2, 3 as MIDI (green is on) |
-| Top row | The tune's own **sound effects**, purple, louder the harder you hit |
+| **Mixer** | Opens on a piano roll (current note, tuning in cents, a meter per voice). Voice 1–3 level (0 mutes), **Tempo Sync**, **Speed**, and read-outs for estimated **BPM** and **Key** (`0` / `--` until known). |
+| **Tune + Loop** | **SID File** (hold its knob and click the jog wheel to browse), **Subtune**, **Timbre Lock**, **AutoTune**, **Master Tune**, **Loop Len / Start / Nudge**. |
+| **Mix + Glue** | **Spread**, **Duck** + **DuckRel** (pump on every beat), **Filter Pump**, **Lo-Fi**, **Transpose** (±12), **FX Duck**. |
+| **Pad + Filter** | **Filter**, **Cutoff**, **Reso**, **Chip** (6581 / 8580), **Play On Voice**, **Pad Sound**, **Pad Mode** (Play / Control). |
+| **Notes Out** | Send voice 1–3 as MIDI, each voice's channel, **SID Delay**. |
 
-**Loop capture:** press to start a loop on the bar that's playing (the pad flashes red), and again to end it on the bar playing
-then (steady red). **Loop Start** and **Loop Len** are set to match, up to 8 bars, and the song goes round that stretch. Press it
-again for a new loop, or set Loop Len to Off to run on. Bars are counted from Play, so the Move's transport must be running.
+Duck and Filter Pump follow the Move's clock, or the tune's own beat when the Move is stopped.
 
-**Sound effects:** many tunes carry jingles and effects as extra subtunes. TinySID finds the short ones (up to eight) and plays
-them over the song, three at a time at most. The song dips as one hits (**FX Duck**). Tunes that fire effects from inside the song
-have nothing to find.
+## Playing the pads
+
+**Play mode.** Set **Play On Voice** to hand one voice to the pads. It plays your notes with one of the song's own instruments
+(**Pad Sound**), in tune with the song. One note at a time; velocity sets level.
+
+**Control mode.** Set **Pad Mode** to Control and the pads become lit buttons:
+
+| Pads | Action |
+|---|---|
+| Bottom row 1–3 | Mute / unmute voice 1, 2, 3 |
+| Bottom row 4–7 | Unmute all · transpose down · up · reset |
+| Bottom row 8 | **Loop capture**: press to start a loop on the current bar (flashing), again to end it (steady red). Up to 8 bars; needs the Move's transport running. |
+| Second row 1–3 | Send voice 1, 2, 3 as MIDI (green = on) |
+| Top row | The tune's **sound effects** (purple), louder the harder you hit |
+
+Sound effects are short extra subtunes TinySID finds in the file (up to eight, three at once). The song dips as one hits
+(**FX Duck**). Tunes that fire effects from inside the song have none to find.
 
 ## Notes Out
 
-Each SID voice can play an instrument on another Move track:
+Play another Move track from each SID voice:
 
-1. Put TinySID on its own track (say track 4) and turn that track's **MIDI In off**, or it hears its own notes coming back.
-2. Give tracks 1 to 3 an instrument and set their MIDI In to channels 1, 2 and 3. Those are the channels voices 1, 2 and 3 send on
-   to start with; change them on the Notes Out page.
-3. Select TinySID's own track on the Move before opening it. The Move lights a pad green for every note on its selected track,
-   which would flicker over TinySID's colours.
-4. Switch voices on with the second row of pads or the Notes Out page, then set **SID Delay** by ear so the SID lines up with the
-   tracks (0 to 200 ms, 50 to start with, only applied while a voice is being sent).
+1. Put TinySID on its own track and turn that track's **MIDI In off** (or it hears its own notes).
+2. Give tracks 1–3 instruments with MIDI In on channels 1, 2, 3 (the default send channels).
+3. Select TinySID's own track before opening it, or the Move's note lights flicker over its pads.
+4. Switch voices on (second pad row or Notes Out page) and set **SID Delay** by ear (0–200 ms, default 50).
 
-The note sent is the nearest semitone to the pitch you hear, and the rest goes out as pitch bend (a ±2 semitone range is
-assumed), so a tune that sits 37 cents sharp is played 37 cents sharp on the other track too. Each voice has its own channel
-because pitch bend is per channel. The switches start off on a new module and are saved with the set. The mute pads only affect
-the SID's own sound, so you can mute a voice and still send it.
+Each note goes out as the nearest semitone plus pitch bend (±2 semitone range assumed), so detuned tunes stay detuned. Sending is
+separate from muting: you can mute a voice and still send it. Send switches start off and are saved with the set.
 
-## Timbre Lock
+## Sound and tuning
 
-Turn it on while a tune plays and the sound is frozen: each voice's waveform, pulse width and envelope, and the filter. The
-tune's notes keep playing. Change subtune or load another `.sid` and it plays through the old sound. Drum hits pass through
-untouched, so drums stay drums.
+- **Timbre Lock** freezes each voice's waveform, pulse width and envelope, plus the filter. Load another tune or subtune and it
+  plays through the old sound. Drums pass through untouched.
+- **AutoTune** learns the tune's offset from A = 440 Hz (often 20–60 cents) over a few seconds and removes it, keeping vibrato and
+  slides. **A440 Chromatic** also pulls held notes onto exact pitches; **In-Key** onto the tune's key. **Master Tune** shifts
+  everything ±100 cents.
+- **Filter** = Song keeps the tune's filter, with Cutoff and Reso as offsets. Low / Band / High Pass runs all voices through that
+  filter, with Cutoff and Reso absolute.
 
-## AutoTune
+## Loops and timing
 
-Many tunes sit a constant 20 to 60 cents off A = 440 Hz. TinySID learns the offset from the tune's own notes and takes it off
-every note, so melodies, slides, drum sweeps and vibrato keep their shape. **A440 Chromatic** also draws held notes onto the exact
-note, and **In-Key** onto the tune's key. **Master Tune** (-100 to +100 cents) shifts the whole grid. It needs a few seconds of the
-tune to learn the offset.
-
-## Loops
-
-**Loop Len**, **Loop Start** and **Loop Nudge** repeat a stretch of the song. With Loop Start 5 and Loop Len 4 Bars, the tune
-is caught at the top of bar 5 and rewound to it when bar 9 arrives, over and over. A bar is the tune's own 16 rows. If a tune
-starts with a pickup and the loop sounds early or late, set **Loop Nudge** (0 to 15 sixteenths) until it starts on the real
-downbeat. **Host Lock** keeps the repeats exact.
-
-## Keeping time
-
-- **Free** modes play the tune at its natural speed.
-- **Host Lock** follows the Move's clock, so the tune stays in step with your clips however long they loop and starts on Step 1
-  when you press play. **0.5x** and **2x** play it at half or double speed.
-- **Speed** nudges the tempo without changing pitch (this takes the tune out of the lock).
-
-The tune follows the Move's transport: play starts it from the top, stop silences it, and continue picks up where it left off.
+- **Loops.** Loop Start 5 + Loop Len 4 Bars repeats bars 5–8. A bar is 16 of the tune's rows. If the loop sounds early or late
+  (tunes with a pickup), adjust **Loop Nudge** (0–15 sixteenths).
+- **Free (PAL / NTSC)** plays the tune at its natural speed.
+- **Host Lock 1x / 0.5x / 2x** follows the Move's clock without drift and starts on Step 1. Use it for exact loops.
+- **Speed** changes tempo without changing pitch (and leaves Host Lock).
+- Transport: play starts from the top, stop silences, continue resumes.
 
 ## Limits
 
-- Single-SID `.sid` files only (PSID format). RSID files and tunes that need two SID chips are not supported.
-- Sampled "digi" sounds don't play.
-- Key and BPM are estimates, and some tunes have no clear key (shown as `--`).
-- Notes Out assumes the receiving instrument's pitch-bend range is ±2 semitones, and SID Delay is one value for all three voices.
+- Single-SID PSID files only. No RSID or multi-SID tunes.
+- Sampled "digi" sounds don't play; combined waveforms are approximate.
+- Key and BPM are estimates; some tunes have no clear key (`--`).
+- Notes Out assumes a ±2 semitone pitch-bend range, and SID Delay is shared by all three voices.
 
 ## For developers
 
-Build with `scripts/build.sh` (use `RELEASE=1` for anything you publish, so no copyrighted tune is bundled) and test with
-`scripts/test.sh`. How it works inside is in [docs/TECHNICAL.md](docs/TECHNICAL.md).
+```bash
+scripts/build.sh              # cross-build build/TinySID.tar.gz (needs python3 + aarch64-linux-gnu-gcc or zig)
+RELEASE=1 scripts/build.sh    # use for anything you publish: never bundles a copyrighted tune
+scripts/test.sh               # native unit tests (ASan/UBSan where available), UI tests if node is installed
+```
 
-SID tunes are copyrighted by their authors. Keep your own `.sid` files out of the repo; they are git-ignored.
+Internals are in [docs/TECHNICAL.md](docs/TECHNICAL.md). SID tunes are copyrighted by their authors: keep your `.sid` files out of
+the repo (they're git-ignored).
