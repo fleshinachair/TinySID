@@ -38,7 +38,7 @@ level only existed to carry knobs for the roll; with the roll on the Mixer it is
 plugin sets it to All Voices, so the roll follows whichever voice started last. The engine still answers `snoop_voice`, `last_note`
 and `snoop_note` etc. for tests and tools.
 
-**Tune + Loop**, one page (level `tune`): `loop_length` (Off / 1 / 2 / 4 / 8 Bars), `loop_start` (1..32), `loop_nudge` (0..15 rows) and
+**Tune + Loop**, one page (level `tune`): `loop_length` (Off / 1 to 8 Bars), `loop_start` (1..256), `loop_nudge` (0..15 rows) and
 `sid_file` (file browser, starts in the module's `sids/` folder) on the first line; `subtune` (1..N, re-inits the 6502),
 `timbre_lock`, `pitch_snap` (AutoTune: Off / A440 Chromatic / In-Key) and `master_tune` (-100..100 cents) on the second.
 
@@ -145,7 +145,7 @@ A live clock hands the beat back to the host at once, so the two never double up
 - Saved with the set: `transpose`, `filter_pump`, `lofi`. Not saved: `pad_mode` (a mode, and restored it would leave
   the pads silent) and `timbre_lock` (restored, it would lock whatever happens to be playing at that moment).
 
-**Bar looper.** `loop_start` (bar, 1..32), `loop_length` (Off / 1 / 2 / 4 / 8 bars) and `loop_nudge` (0..15 rows). A bar is the
+**Bar looper.** `loop_start` (bar, 1..256), `loop_length` (Off / 1 to 8 bars) and `loop_nudge` (0..15 rows). A bar is the
 TUNE's 16 rows: a row is 6 host ticks at Host Lock 1x, 12 at 0.5x and 3 at 2x, so a bar is 96, 192 or 48 ticks and always holds
 the same frames of the tune (it is 96 ticks whenever the lock is not engaged: a free mode, an unknown row length, Speed off
 1.0). Song time (`song_pos`) counts those ticks; bar 1 begins `loop_nudge` rows after the first tick after Start, which
@@ -159,6 +159,19 @@ first bar has not gated on, is not cut: its gate drops so it dies by its own rel
 release stay as they were (`seam_hold`) until it has, or until the song writes them again. Length Off keeps the snapshot. A new `loop_start`
 drops it and, if the song has already passed that bar, nothing is caught until a new run (Start, subtune, file). Without MIDI
 clock there are no bar lines and nothing loops. Not saved with the state.
+
+**Loop capture.** `loop_capture` ("start" / "stop" / "toggle" / "cancel"; reads idle / recording / looping) is the eighth pad of Control
+mode's bottom row (`pad_press` 75). The looper only snapshots at its own start bar, which is already past when you press, so
+`bar_snap_take` keeps a copy of the 6502 at the top of every bar (`bar_ram` and friends, one 64 KB copy, taken in `bar_loop_tick`).
+Start copies the current bar's snapshot into the loop's and sets `loop_start` to that bar with the length off, so the song carries on
+while it is captured. Stop sets `loop_length` to the bars from the start through the bar playing then (8 at most). A start with no clock, or
+before the bar's top has been seen, does nothing.
+
+**Output delay.** The tracks Notes Out plays sound later than TinySID itself (the Move's MIDI input plus their own instruments), so
+`audio_delay` (0..200 ms, 50 as the module starts, 0 in the bare engine) holds the whole output back, but only while at least one
+voice is sent (`audio_delay_run`, after the effects are mixed in). All three voices wait together: delaying only the sent ones would put
+the tune out of time with itself. Switching it in or out fades the output out over 5 ms, lets the new delay line fill (a silent gap as
+long as the delay) and fades back in, so it cannot click. The delay line is allocated the first time a delay is set.
 
 **Pending readouts.** `song_key` reads `--` until the scan has voted, and `song_bpm` reads 0 until the tempo is known: from the
 title table at load, from the scan's gate cadence, or typed. The internal 116 BPM fallback only drives Host Lock until then.
