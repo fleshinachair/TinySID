@@ -9,7 +9,7 @@ chip emulation, live and locked to your Move's tempo.
 - **Borrow one tune's sound for another.** Lock a tune's instruments with **Timbre Lock**, then load a different `.sid`.
 - **Play it from the pads.** Mute voices, transpose, capture loops, fire the tune's sound effects, or play its real instruments.
 
-Version 0.9.0 · [Release notes](RELEASE_NOTES.md)
+Version 0.9.1 · [Release notes](RELEASE_NOTES.md)
 
 ## Install
 
@@ -98,3 +98,7 @@ scripts/test.sh               # native unit tests (ASan/UBSan where available), 
 
 Internals are in [docs/TECHNICAL.md](docs/TECHNICAL.md). SID tunes are copyrighted by their authors: keep your `.sid` files out of
 the repo (they're git-ignored).
+
+## Licence
+
+[MIT](LICENSE). Not derived from Tammo Hinrichs' TinySID player; it only shares the name.

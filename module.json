@@ -2,7 +2,7 @@
  "id": "tinysid",
  "name": "TinySID",
  "abbrev": "SID",
- "version": "0.9.0",
+ "version": "0.9.1",
  "description": "Plays C64 .sid music on a live 6502 + SID core: mixer, filter and tuning tools, a bar looper, a piano roll, and a pad voice that plays the song's own instruments.",
  "author": "TinySID",
  "dsp": "dsp.so",

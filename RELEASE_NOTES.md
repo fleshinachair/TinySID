@@ -1,4 +1,6 @@
-# TinySID v0.9.0
+# TinySID v0.9.1
+
+**v0.9.1 adds an MIT licence** (`LICENSE`, also included in the download). There are no code or feature changes from v0.9.0.
 
 **Turn any C64 `.sid` into a live instrument on your Ableton Move.** TinySID runs the tune's own 6502 player on a SID chip emulation
 inside a Schwung track slot, locked to the Move's clock.

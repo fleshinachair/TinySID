@@ -55,6 +55,7 @@ cp "$ROOT/module.json" "$STAGE/module.json"
 cp "$ROOT/canvas.js" "$STAGE/canvas.js"              # the piano roll page (also inlined into ui_chain.js)
 cp "$ROOT/help.json" "$STAGE/help.json"
 cp "$ROOT/release.json" "$STAGE/release.json"
+cp "$ROOT/LICENSE" "$STAGE/LICENSE"
 tar -czf "$BUILD/TinySID.tar.gz" -C "$BUILD/stage" tinysid
 
 echo
